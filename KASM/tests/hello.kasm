@@ -1,0 +1,8 @@
+internal println 240
+
+.local message
+
+set message "Hello, World!"
+
+push message
+call println
