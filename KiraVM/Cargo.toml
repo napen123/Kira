@@ -1,0 +1,7 @@
+[package]
+name = "kiravm"
+version = "0.1.0"
+authors = ["Ethan Dagner <napen123@gmail.com>"]
+
+[dependencies]
+byteorder = "1"
