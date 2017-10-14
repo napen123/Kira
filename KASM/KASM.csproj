@@ -34,6 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Ast.cs" />
+    <Compile Include="BytecodeWriter.cs" />
     <Compile Include="Compiler.cs" />
     <Compile Include="Error.cs" />
     <Compile Include="Function.cs" />

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Collections.Generic;
 
 namespace KASM
@@ -9,68 +8,44 @@ namespace KASM
     public static class Compiler
     {
         private static BinaryWriter _programWriter;
-
+        
         private static readonly List<Local> Locals = new List<Local>();
         private static readonly List<string> Strings = new List<string>();
         private static readonly List<Function> Functions = new List<Function>();
         
         public static void Compile(string input, string output)
         {
-            using (var realWriter = new BinaryWriter(File.Open(output, FileMode.Create)))
+            using (var memory = new MemoryStream())
             {
-                using (var stream = new MemoryStream())
+                using (_programWriter = new BinaryWriter(memory))
                 {
-                    using (_programWriter = new BinaryWriter(stream))
+                    using (var reader = new StreamReader(input))
                     {
-                        using (var reader = new StreamReader(input))
+                        string line;
+
+                        while ((line = reader.ReadLine()) != null)
                         {
-                            string line;
+                            var trimmed = line.Trim();
 
-                            while ((line = reader.ReadLine()) != null)
-                            {
-                                var trimmed = line.Trim();
+                            if (trimmed.Length == 0 || trimmed.StartsWith("#", StringComparison.Ordinal))
+                                continue;
 
-                                if (trimmed.Length == 0 || trimmed.StartsWith("#", StringComparison.Ordinal))
-                                    continue;
+                            var tokens = Lexer.Tokenize(trimmed);
 
-                                var tokens = Lexer.Tokenize(trimmed);
+                            if (tokens.Count == 0)
+                                continue;
 
-                                if (tokens.Count == 0)
-                                    continue;
+                            var statement = Parser.Parse(tokens);
 
-                                var statement = Parser.Parse(tokens);
-
-#if DEBUG
-                                foreach (var token in tokens)
-                                    Console.WriteLine($"{token.Type} :: [{token.Value}]");
-
-                                Console.WriteLine(statement);
-#endif
-
-                                if (statement.IsSpecial)
-                                    ExecuteSpecial(statement);
-                                else
-                                    ExecuteInstruction(statement);
-                            }
+                            if (statement.IsSpecial)
+                                ExecuteSpecial(statement);
+                            else
+                                ExecuteInstruction(statement);
                         }
-                        
-                        realWriter.Write(Encoding.ASCII.GetBytes("KIRA"));
-                        realWriter.Write(Locals.Count);
-                        realWriter.Write(Strings.Count);
-
-                        foreach (var str in Strings)
-                        {
-                            var bytes = Encoding.UTF8.GetBytes(str);
-                        
-                            realWriter.Write(bytes.Length);
-                            realWriter.Write(bytes);
-                        }
-                    
-                        realWriter.Write(stream.Length);
-
-                        stream.Position = 0;
-                        stream.CopyTo(realWriter.BaseStream);
                     }
+
+                    using (var bytecodeWriter = new BytecodeWriter(File.Open(output, FileMode.Create)))
+                        bytecodeWriter.WriteFile(Locals.Count, Strings.ToArray(), memory);
                 }
             }
         }
