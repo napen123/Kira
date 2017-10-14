@@ -165,12 +165,7 @@ namespace KASM
                         break;
                     }
 
-                    Functions.Add(new Function
-                    {
-                        Name = name.Value,
-                        Type = FunctionType.Internal,
-                        InternalCode = code.Value
-                    });
+                    Functions.Add(new InternalFunction(name.Value, code.Value));
                 }
                     break;
                 case Ast.InstructionType.External:
@@ -183,12 +178,7 @@ namespace KASM
                     if (!(statement.Arguments[1] is StringToken library))
                         return;
                     
-                    Functions.Add(new Function
-                    {
-                        Name = name.Value,
-                        Type = FunctionType.External,
-                        Library = library.Value
-                    });
+                    Functions.Add(new ExternalFunction(name.Value, library.Value));
                 }
                     break;
                 case Ast.InstructionType.Push:
@@ -236,17 +226,17 @@ namespace KASM
 
                         found = true;
 
-                        switch (func.Type)
+                        switch (func)
                         {
-                            case FunctionType.Standard:
+                            case StandardFunction _:
                                 _programWriter.Write(VM.StandardCall);
                                 // TODO: Finish
                                 break;
-                            case FunctionType.Internal:
+                            case InternalFunction inter:
                                 _programWriter.Write(VM.InternalCall);
-                                _programWriter.Write(func.InternalCode);
+                                _programWriter.Write(inter.Code);
                                 break;
-                            case FunctionType.External:
+                            case ExternalFunction _:
                                 _programWriter.Write(VM.ExternalCall);
                                 // TODO: Finish
                                 break;
