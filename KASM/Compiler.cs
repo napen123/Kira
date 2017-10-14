@@ -34,13 +34,21 @@ namespace KASM
 
                             if (tokens.Count == 0)
                                 continue;
+                            
+                            foreach(var token in tokens)
+                                Console.WriteLine(token.ToString());
 
                             var statement = Parser.Parse(tokens);
 
-                            if (statement.IsSpecial)
-                                ExecuteSpecial(statement);
-                            else
-                                ExecuteInstruction(statement);
+                            switch (statement)
+                            {
+                                case SpecialStatement spec:
+                                    ExecuteSpecial(spec);
+                                    break;
+                                case StandardStatement stan:
+                                    ExecuteStandard(stan);
+                                    break;
+                            }
                         }
                     }
 
@@ -59,17 +67,17 @@ namespace KASM
 
                 var value = loc.Value;
 
-                return value.Type == TokenType.Identifier ? GetLocalValue(value.String) : value;
+                return value is IdentifierToken ident ? GetLocalValue(ident.Value) : value;
             }
                 
             Error.ThrowError("No local with that name has been declared.");
 
-            return new Token();
+            return null;
         }
         
         private static Token ValidateLiteral(Token token)
         {
-            return token.Type != TokenType.Identifier ? token : GetLocalValue(token.String);
+            return token is IdentifierToken ident ? GetLocalValue(ident.Value) : token;
         }
 
         private static Token[] ValidateLiterals(IReadOnlyList<Token> tokens)
@@ -92,84 +100,94 @@ namespace KASM
 
         private static void WriteLiteral(Token token)
         {
-            switch (token.Type)
+            switch (token)
             {
-                case TokenType.Integer:
+                case IntegerToken i:
                     _programWriter.Write(VM.Integer);
-                    _programWriter.Write(token.Integer);
+                    _programWriter.Write(i.Value);
                     break;
-                case TokenType.Float:
+                case FloatToken f:
                     _programWriter.Write(VM.Float);
-                    _programWriter.Write(token.Float);
+                    _programWriter.Write(f.Value);
                     break;
-                case TokenType.String:
-                    var index = Strings.IndexOf(token.String);
+                case StringToken s:
+                    var index = Strings.IndexOf(s.Value);
                     
                     _programWriter.Write(VM.String);
 
                     if (index == -1)
                     {
-                        Strings.Add(token.String);
+                        Strings.Add(s.Value);
                         _programWriter.Write(Strings.Count - 1);
                     }
                     else
                         _programWriter.Write(index);
+                    
                     break;
             }
         }
 
-        private static void ExecuteSpecial(Statement statement)
+        private static void ExecuteSpecial(SpecialStatement statement)
         {
-            switch (statement.Special)
+            switch (statement.Instruction)
             {
                 case Ast.SpecialType.Local:
                 {
-                    var name = statement.Arguments[0].String;
+                    if (!(statement.Arguments[0] is IdentifierToken name))
+                        return;
 
-                    CheckNameAvailable(name);
+                    CheckNameAvailable(name.Value);
                     
-                    Locals.Add(new Local(name, new Token {Type = TokenType.Integer, Integer = 0}));
+                    Locals.Add(new Local(name.Value, new IntegerToken(0)));
                 }
                     break;
             }
         }
 
-        private static void ExecuteInstruction(Statement statement)
+        private static void ExecuteStandard(StandardStatement statement)
         {
             switch (statement.Instruction)
             {
                 case Ast.InstructionType.Internal:
                 {
-                    var name = statement.Arguments[0].String;
+                    if (!(statement.Arguments[0] is IdentifierToken name))
+                        return;
 
-                    CheckNameAvailable(name);
+                    CheckNameAvailable(name.Value);
                     
-                    var code = statement.Arguments[1].Integer;
+                    if (!(statement.Arguments[1] is IntegerToken code))
+                        return;
                     
-                    if(!VM.Internals.Contains(code))
+                    if (!VM.Internals.Contains(code.Value))
+                    {
                         Error.ThrowError("No such internal in VM.");
-                    
+
+                        break;
+                    }
+
                     Functions.Add(new Function
                     {
-                        Name = name,
+                        Name = name.Value,
                         Type = FunctionType.Internal,
-                        InternalCode = code
+                        InternalCode = code.Value
                     });
                 }
                     break;
                 case Ast.InstructionType.External:
                 {
-                    var name = statement.Arguments[0].String;
+                    if (!(statement.Arguments[0] is IdentifierToken name))
+                        return;
+
+                    CheckNameAvailable(name.Value);
                     
-                    CheckNameAvailable(name);
-                    
-                    var library = statement.Arguments[1].String;
+                    if (!(statement.Arguments[1] is StringToken library))
+                        return;
                     
                     Functions.Add(new Function
                     {
-                        Name = name,
+                        Name = name.Value,
                         Type = FunctionType.External,
-                        Library = library
+                        Library = library.Value
                     });
                 }
                     break;
@@ -187,15 +205,17 @@ namespace KASM
                     break;
                 case Ast.InstructionType.Set:
                 {
-                    var name = statement.Arguments[0].String;
-                    var index = Locals.FindIndex(loc => loc.Name == name);
+                    if (!(statement.Arguments[0] is IdentifierToken name))
+                        return;
+                    
+                    var index = Locals.FindIndex(loc => loc.Name == name.Value);
                     
                     if(index == -1)
                         Error.ThrowError("No literal has been declared with that name.");
                     
                     var value = ValidateLiteral(statement.Arguments[1]);
 
-                    Locals[index] = new Local(name, value);
+                    Locals[index] = new Local(name.Value, value);
                     
                     _programWriter.Write(VM.Set);
                     _programWriter.Write(index);
@@ -204,13 +224,14 @@ namespace KASM
                     break;
                 case Ast.InstructionType.Call:
                 {
-                    var name = statement.Arguments[0].String;
-
+                    if (!(statement.Arguments[0] is IdentifierToken name))
+                        return;
+                    
                     var found = false;
 
                     foreach (var func in Functions)
                     {
-                        if(func.Name != name)
+                        if(func.Name != name.Value)
                             continue;
 
                         found = true;

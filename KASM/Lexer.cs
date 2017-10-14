@@ -44,12 +44,8 @@ namespace KASM
 
                     i = start + end - 1;
                     var str = line.Substring(start + 1, end - 2);
-                    
-                    ret.Add(new Token
-                    {
-                        Type = TokenType.String,
-                        String = str
-                    });
+
+                    ret.Add(new StringToken(str));
                     
                     continue;
                 }
@@ -91,24 +87,12 @@ namespace KASM
 
                     i = start + end - 1;
                     var value = line.Substring(start, end);
-                    
+
                     if (isInteger)
-                    {
-                        ret.Add(new Token
-                        {
-                            Type = TokenType.Integer,
-                            Integer = int.Parse(value)
-                        });
-                    }
+                        ret.Add(new IntegerToken(int.Parse(value)));
                     else
-                    {
-                        ret.Add(new Token
-                        {
-                            Type = TokenType.Float,
-                            Float = float.Parse(value)
-                        });
-                    }
-                    
+                        ret.Add(new FloatToken(float.Parse(value)));
+
                     continue;
                 }
 
@@ -130,14 +114,10 @@ namespace KASM
                     i = start + end - 1;
                     var special = line.Substring(start + 1, end - 1);
                     
-                    if(!Ast.Specials.TryGetValue(special, out Ast.SpecialType spec))
+                    if(!Ast.Specials.TryGetValue(special, out var spec))
                         Error.ThrowError("Unknown special instruction.");
                     
-                    ret.Add(new Token
-                    {
-                        Type = TokenType.Special,
-                        Special = spec
-                    });
+                    ret.Add(new SpecialToken(spec));
                     
                     continue;
                 }
@@ -160,22 +140,10 @@ namespace KASM
                     i = start + end - 1;
                     var ident = line.Substring(start, end);
 
-                    if (Ast.Instructions.TryGetValue(ident, out Ast.InstructionType inst))
-                    {
-                        ret.Add(new Token
-                        {
-                            Type = TokenType.Instruction,
-                            Instruction = inst
-                        });
-                    }
+                    if (Ast.Instructions.TryGetValue(ident, out var inst))
+                        ret.Add(new InstructionToken(inst));
                     else
-                    {
-                        ret.Add(new Token
-                        {
-                            Type = TokenType.Identifier,
-                            String = ident
-                        });
-                    }
+                        ret.Add(new IdentifierToken(ident));
 
                     continue;
                 }

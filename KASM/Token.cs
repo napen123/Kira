@@ -1,68 +1,115 @@
-﻿using System;
-using System.Runtime.InteropServices;
-
+﻿
 namespace KASM
 {
-    public enum TokenType
+    public abstract class Token
     {
-        Integer,
-        Float,
-        String,
+        public abstract bool Literal { get; }
         
-        Instruction,
-        Special,
-        Identifier
+        public override string ToString()
+        {
+            return "<unknown>";
+        }
     }
 
-    [StructLayout(LayoutKind.Explicit)]
-    public struct Token
+    public class IntegerToken : Token
     {
-        [FieldOffset(0)]
-        public TokenType Type;
+        public readonly int Value;
 
-        [FieldOffset(4)]
-        public int Integer;
+        public override bool Literal { get; } = true;
 
-        [FieldOffset(4)]
-        public float Float;
-
-        [FieldOffset(4)]
-        public Ast.SpecialType Special;
-        
-        [FieldOffset(4)]
-        public Ast.InstructionType Instruction;
-
-        [FieldOffset(8)]
-        public string String;
-
-        public bool Literal =>
-            Type == TokenType.Integer ||
-            Type == TokenType.Float ||
-            Type == TokenType.String ||
-            Type == TokenType.Identifier;
-        
-#if DEBUG
-
-        public object Value
+        public IntegerToken(int value)
         {
-            get
-            {
-                switch (Type)
-                {
-                    case TokenType.Integer:
-                        return Integer;
-                    case TokenType.Float:
-                        return Float;
-                    case TokenType.Special:
-                        return Special;
-                    case TokenType.Instruction:
-                        return Instruction;
-                    default:
-                        return String;
-                }
-            }
+            Value = value;
         }
+
+        public override string ToString()
+        {
+            return $"<integer: {Value:D}>";
+        }
+    }
+
+    public class FloatToken : Token
+    {
+        public readonly float Value;
+
+        public override bool Literal { get; } = true;
+
+        public FloatToken(float value)
+        {
+            Value = value;
+        }
+
+        public override string ToString()
+        {
+            return $"<float: {Value:F}>";
+        }
+    }
+
+    public class StringToken : Token
+    {
+        public readonly string Value;
+
+        public override bool Literal { get; } = true;
         
-#endif
+        public StringToken(string value)
+        {
+            Value = value;
+        }
+
+        public override string ToString()
+        {
+            return $"<string: \"{Value}\">";
+        }
+    }
+
+    public class InstructionToken : Token
+    {
+        public readonly Ast.InstructionType Value;
+
+        public override bool Literal { get; } = false;
+        
+        public InstructionToken(Ast.InstructionType value)
+        {
+            Value = value;
+        }
+
+        public override string ToString()
+        {
+            return $"<instruction: {Value.ToString()}>";
+        }
+    }
+    
+    public class SpecialToken : Token
+    {
+        public readonly Ast.SpecialType Value;
+
+        public override bool Literal { get; } = false;
+        
+        public SpecialToken(Ast.SpecialType value)
+        {
+            Value = value;
+        }
+
+        public override string ToString()
+        {
+            return $"<special: {Value.ToString()}>";
+        }
+    }
+    
+    public class IdentifierToken : Token
+    {
+        public readonly string Value;
+
+        public override bool Literal { get; } = false;
+        
+        public IdentifierToken(string value)
+        {
+            Value = value;
+        }
+
+        public override string ToString()
+        {
+            return $"<identifier: {Value}>";
+        }
     }
 }

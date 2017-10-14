@@ -9,7 +9,6 @@ namespace KASM
         External
     }
     
-    [StructLayout(LayoutKind.Auto)]
     public struct Function
     {
         public FunctionType Type;

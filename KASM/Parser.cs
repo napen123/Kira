@@ -10,24 +10,22 @@ namespace KASM
             var first = tokens[0];
             var args = tokens.Skip(1).ToArray();
 
-            switch (first.Type)
+            switch (first)
             {
-                case TokenType.Special:
-                    return ParseSpecial(first, args);
-                case TokenType.Instruction:
-                    return ParseInstruction(first, args);
+                case SpecialToken spec:
+                    return ParseSpecial(spec, args);
+                case InstructionToken inst:
+                    return ParseInstruction(inst, args);
                 default:
-                    Error.ThrowError("Expected an instruction");
+                    Error.ThrowError("Expected an instruction.");
 
                     return null;
             }
         }
 
-        private static Statement ParseSpecial(Token first, IReadOnlyList<Token> args)
+        private static Statement ParseSpecial(SpecialToken first, IReadOnlyList<Token> args)
         {
-            var ret = new Statement {IsSpecial = true};
-
-            switch (first.Special)
+            switch (first.Value)
             {
                 case Ast.SpecialType.Local:
                 {
@@ -35,30 +33,30 @@ namespace KASM
                     {
                         Error.ThrowError("Invalid number of arguments given to .local; expected 1 but got " +
                                          args.Count + ".");
+
+                        break;
                     }
 
                     var local = args[0];
 
-                    if (local.Type != TokenType.Identifier)
+                    if (!(local is IdentifierToken))
                     {
-                        Error.ThrowError("Invalid argument given to .local; expected an identifier but got " +
-                                         local.Type + ".");
+                        Error.ThrowError("Invalid argument given to .local; expected an <identifier> but got " +
+                                         local + ".");
+
+                        break;
                     }
 
-                    ret.Special = Ast.SpecialType.Local;
-                    ret.Arguments = new[] {local};
+                    return new SpecialStatement(Ast.SpecialType.Local, new[] {local});
                 }
-                    break;
             }
 
-            return ret;
+            return null;
         }
 
-        private static Statement ParseInstruction(Token first, IReadOnlyList<Token> args)
+        private static Statement ParseInstruction(InstructionToken first, IReadOnlyList<Token> args)
         {
-            var ret = new Statement();
-
-            switch (first.Instruction)
+            switch (first.Value)
             {
                 case Ast.InstructionType.Internal:
                 {
@@ -66,139 +64,155 @@ namespace KASM
                     {
                         Error.ThrowError("Invalid number of arguments given to internal; expected 2 but got " +
                                          args.Count + ".");
+
+                        break;
                     }
 
                     var @internal = args[0];
 
-                    if (@internal.Type != TokenType.Identifier)
+                    if (!(@internal is IdentifierToken))
                     {
-                        Error.ThrowError("Invalid argument given to internal; expected an identifier but got " +
-                                         @internal.Type + ".");
+                        Error.ThrowError("Invalid argument given to internal; expected an <identifier> but got " +
+                                         @internal + ".");
+
+                        break;
                     }
 
                     var code = args[1];
-                    
-                    if (code.Type != TokenType.Integer)
+
+                    if (!(code is IntegerToken))
                     {
-                        Error.ThrowError("Invalid argument given to internal; expected an integer but got " +
-                                         @internal.Type + ".");
+                        Error.ThrowError("Invalid argument given to internal; expected an <integer> but got " +
+                                         code + ".");
+
+                        break;
                     }
 
-                    ret.Instruction = Ast.InstructionType.Internal;
-                    ret.Arguments = new[] {@internal, code};
+                    return new StandardStatement(Ast.InstructionType.Internal, new[] {@internal, code});
                 }
-                    break;
                 case Ast.InstructionType.External:
                 {
                     if (args.Count != 2)
                     {
                         Error.ThrowError("Invalid number of arguments given to external; expected 2 but got " +
                                          args.Count + ".");
+
+                        break;
                     }
 
                     var external = args[0];
 
-                    if (external.Type != TokenType.Identifier)
+                    if (!(external is IdentifierToken))
                     {
-                        Error.ThrowError("Invalid argument given to external; expected an identifier but got " +
-                                         external.Type + ".");
+                        Error.ThrowError("Invalid argument given to external; expected an <identifier> but got " +
+                                         external + ".");
+
+                        break;
                     }
 
                     var library = args[1];
 
-                    if (library.Type != TokenType.String)
+                    if (!(library is StringToken))
                     {
-                        Error.ThrowError("Invalid argument given to external; expected a string but got " +
-                                         library.Type + ".");
+                        Error.ThrowError("Invalid argument given to external; expected a <string> but got " +
+                                         library + ".");
+
+                        break;
                     }
 
-                    ret.Instruction = Ast.InstructionType.External;
-                    ret.Arguments = new[] {external, library};
+                    return new StandardStatement(Ast.InstructionType.External, new[] {external, library});
                 }
-                    break;
                 case Ast.InstructionType.Push:
                 {
                     if (args.Count != 1)
                     {
                         Error.ThrowError("Invalid number of arguments given to push; expected 1 but got " +
                                          args.Count + ".");
+
+                        break;
                     }
 
                     var item = args[0];
 
-                    if (!item.Literal)
+                    if (!item.Literal && !(item is IdentifierToken))
                     {
-                        Error.ThrowError("Invalid argument given to external; expected a literal but got " +
-                                         item.Type + ".");
+                        Error.ThrowError("Invalid argument given to external; expected a local name or literal but got " +
+                                         item + ".");
+
+                        break;
                     }
 
-                    ret.Instruction = Ast.InstructionType.Push;
-                    ret.Arguments = new[] {item};
+                    return new StandardStatement(Ast.InstructionType.Push, new[] {item});
                 }
-                    break;
                 case Ast.InstructionType.Pop:
                 {
                     if (args.Count != 0)
                     {
                         Error.ThrowError("Invalid number of arguments given to push; expected 0 but got " +
                                          args.Count + ".");
+
+                        break;
                     }
 
-                    ret.Instruction = Ast.InstructionType.Pop;
-                    ret.Arguments = null;
+                    return new StandardStatement(Ast.InstructionType.Pop, null);
                 }
-                    break;
                 case Ast.InstructionType.Set:
                 {
                     if (args.Count != 2)
                     {
                         Error.ThrowError("Invalid number of arguments given to call; expected 2 but got " +
                                          args.Count + ".");
+
+                        break;
                     }
 
                     var item = args[0];
 
-                    if (item.Type != TokenType.Identifier)
+                    if (!(item is IdentifierToken))
                     {
-                        Error.ThrowError("Invalid argument given to set; expected an identifier but got " +
-                                         item.Type + ".");
+                        Error.ThrowError("Invalid argument given to set; expected an <identifier> but got " +
+                                         item + ".");
+
+                        break;
                     }
 
                     var value = args[1];
 
-                    if (!value.Literal)
+                    if (!value.Literal && !(value is IdentifierToken))
                     {
-                        Error.ThrowError("Invalid argument given to set; expected either an identifier or literal " +
-                                         "but got " + item.Type + ".");
+                        Error.ThrowError("Invalid argument given to set; expected either a local name or literal " +
+                                         "but got " + item + ".");
+
+                        break;
                     }
 
-                    ret.Instruction = Ast.InstructionType.Set;
-                    ret.Arguments = new[] {item, value};
+                    return new StandardStatement(Ast.InstructionType.Set, new[] {item, value});
                 }
-                    break;
                 case Ast.InstructionType.Call:
                 {
                     if (args.Count != 1)
                     {
                         Error.ThrowError("Invalid number of arguments given to call; expected 1 but got " +
                                          args.Count + ".");
+
+                        break;
                     }
 
                     var func = args[0];
 
-                    if (func.Type != TokenType.Identifier)
+                    if (!(func is IdentifierToken))
                     {
-                        Error.ThrowError("Invalid argument given to call; expected an identifier but got " +
-                                         func.Type + ".");
+                        Error.ThrowError("Invalid argument given to call; expected an <identifier> but got " +
+                                         func + ".");
+
+                        break;
                     }
 
-                    ret.Instruction = Ast.InstructionType.Call;
-                    ret.Arguments = new[] {func};
+                    return new StandardStatement(Ast.InstructionType.Call, new[] {func});
                 }
-                    break;
             }
 
-            return ret;
+            return null;
         }
     }
 }

@@ -1,29 +1,35 @@
-﻿using System.Runtime.InteropServices;
-
+﻿
 namespace KASM
 {
-    [StructLayout(LayoutKind.Explicit)]
-    public class Statement
+    public abstract class Statement
     {
-        [FieldOffset(0)]
-        public bool IsSpecial;
-        
-        [FieldOffset(1)]
-        public Ast.SpecialType Special;
-        
-        [FieldOffset(1)]
-        public Ast.InstructionType Instruction;
+        public Token[] Arguments { get; }
 
-        [FieldOffset(8)] // TODO: Correctly aligned?
-        public Token[] Arguments;
-        
-#if DEBUG
-
-        public override string ToString()
+        protected Statement(Token[] arguments)
         {
-            return "<" + (IsSpecial ? Special.ToString() : Instruction.ToString()) + ">";
+            Arguments = arguments;
         }
+    }
 
-#endif
+    public class SpecialStatement : Statement
+    {
+        public readonly Ast.SpecialType Instruction;
+
+        public SpecialStatement(Ast.SpecialType instruction, Token[] arguments)
+            : base(arguments)
+        {
+            Instruction = instruction;
+        }
+    }
+
+    public class StandardStatement : Statement
+    {
+        public readonly Ast.InstructionType Instruction;
+
+        public StandardStatement(Ast.InstructionType instruction, Token[] arguments)
+            : base(arguments)
+        {
+            Instruction = instruction;
+        }
     }
 }
