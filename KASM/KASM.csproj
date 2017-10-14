@@ -46,7 +46,6 @@
     <Compile Include="VM.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="spec.txt" />
     <Content Include="tests\hello.kasm">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
